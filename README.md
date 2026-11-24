@@ -4,12 +4,16 @@
 [![Python 3.10](https://img.shields.io/badge/Python-3.10-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-FF4B4B.svg)](https://streamlit.io/)
+[![Live App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://technova-ai-sales-assistant-krri4w97poexshlnkqwpou.streamlit.app/)
 [![ChromaDB](https://img.shields.io/badge/Vector_DB-ChromaDB-purple.svg)](https://www.trychroma.com/)
 [![Sentence Transformers](https://img.shields.io/badge/Embeddings-all--MiniLM--L6--v2-yellow.svg)](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
 [![Docker](https://img.shields.io/badge/Container-Docker-2496ED.svg)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 An enterprise-grade **AI Sales Copilot and Product Recommendation Engine** designed for e-commerce and retail businesses. Unlike conventional generic chatbots, this system acts as a real consultative sales representative—retrieving authoritative data from product catalogs, live inventory counts, hardware specifications, return policies, warranty terms, and financing options.
+
+> 🚀 **Live Production Web Application:**  
+> **[https://technova-ai-sales-assistant-krri4w97poexshlnkqwpou.streamlit.app/](https://technova-ai-sales-assistant-krri4w97poexshlnkqwpou.streamlit.app/)**
 
 ---
 
