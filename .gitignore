@@ -1,0 +1,27 @@
+# Python virtual environment
+venv/
+env/
+.venv/
+
+# Environment variables & secrets
+.env
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local databases (re-created via python scripts/seed_db.py)
+*.db
+technova_store.db
+chroma_db/
+
+# IDE & Editor files
+.vscode/
+.idea/
+
+# OS temporary files
+.DS_Store
+Thumbs.db
+*.log

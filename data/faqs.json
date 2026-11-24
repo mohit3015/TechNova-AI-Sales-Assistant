@@ -1,0 +1,42 @@
+[
+  {
+    "category": "Upgrades & Specifications",
+    "question": "Can I upgrade the RAM and SSD in TechNova laptops?",
+    "answer": "Yes, most TechNova laptops (including ProBook A, CorePlus 15, CodeMaster 14, and Gaming series) feature dual SODIMM slots supporting up to 32GB or 64GB RAM upgrades. They also feature an additional M.2 NVMe SSD expansion slot. Thin models like Feather 13 have soldered RAM but upgradable SSD."
+  },
+  {
+    "category": "Suitability & Recommendations",
+    "question": "Which laptop is recommended for Python programming and Machine Learning on a budget?",
+    "answer": "For basic Python coding, web development, and multitasking under ₹45,000, TechNova ProBook A (₹42,999, 16GB RAM, Ryzen 5) is our best value choice. If you specifically need to train Deep Learning and PyTorch models with GPU acceleration, we recommend TechNova AI Studio 15 (₹67,999) with NVIDIA RTX 3050 6GB GPU or TechNova NitroForce 16 (₹84,999) with RTX 4050."
+  },
+  {
+    "category": "Suitability & Recommendations",
+    "question": "What is the minimum configuration needed for coding?",
+    "answer": "For software development and coding in 2024-2026, we strongly recommend a minimum of 16GB RAM, an SSD of at least 512GB, and a modern 6-core processor (such as Ryzen 5 or Intel Core i5). 8GB RAM can struggle when running IDEs like VS Code with Docker, browser tabs, and local servers simultaneously."
+  },
+  {
+    "category": "Payment & Financing",
+    "question": "How does No-Cost EMI work at TechNova?",
+    "answer": "No-Cost EMI is available on major credit cards (HDFC, ICICI, SBI, Axis) for 3, 6, 9, and 12-month tenures. The bank interest charged is offered as an upfront instant discount by TechNova, so the total amount paid equals the exact product price."
+  },
+  {
+    "category": "Shipping & Delivery",
+    "question": "How long does shipping take and is delivery free?",
+    "answer": "Delivery is 100% free nationwide. Orders to tier-1 metro cities (Delhi NCR, Mumbai, Bengaluru, Pune, Hyderabad, Chennai) arrive in 24 to 48 hours. Other cities receive delivery within 3 to 5 business days."
+  },
+  {
+    "category": "Warranty & Support",
+    "question": "How do I claim on-site warranty repair?",
+    "answer": "You can raise a service request directly through our WhatsApp support or call our toll-free helpline. A certified TechNova technician visits your address within 24 to 48 hours in over 150 supported cities."
+  },
+  {
+    "category": "Returns & Replacements",
+    "question": "What is the return and replacement policy if I receive a defective unit?",
+    "answer": "TechNova offers a 7-day hassle-free replacement policy. If any hardware defect or transit damage is detected within 7 days of delivery, a brand-new replacement unit is dispatched at zero extra cost within 48 hours."
+  },
+  {
+    "category": "Discounts & Offers",
+    "question": "Is there a student discount available?",
+    "answer": "Yes! Verified college students and faculty receive an extra 5% instant discount (up to ₹4,000) along with a free TechNova backpack and wireless mouse upon verifying their student ID or college email address."
+  }
+]

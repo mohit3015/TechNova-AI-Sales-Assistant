@@ -1,0 +1,26 @@
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Environment Variables
+.env
+
+# Python Caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Local databases (will be seeded during build)
+technova_store.db
+chroma_db/
+
+# Git
+.git/
+.gitignore
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
