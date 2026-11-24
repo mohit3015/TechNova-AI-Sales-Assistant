@@ -56,8 +56,8 @@ class IntentDetector:
         """Extracts maximum budget from phrases like 'under 50k', '50,000 ke andar', '₹45000', '4 lakhs'."""
         text_lower = text.lower().replace(",", "")
         
-        # Match '4 lakh', '4 lakhs', '2 lac', '1.5 lakh'
-        lakh_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:lakh?s?|lac?s?)\b", text_lower)
+        # Match '4 lakh', '4 lakhs', '2 lac', '1.5 lakh', '6 lakh tak', '3 lakh mein'
+        lakh_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:lakh[s]?|lac[s]?)\b", text_lower)
         if lakh_match:
             try:
                 return int(float(lakh_match.group(1)) * 100000)
@@ -183,12 +183,20 @@ class IntentDetector:
         ])
 
         # 4. Greeting Intent
-        is_greeting = any(re.match(rf"^{w}\b", lower) for w in ["hello", "hi", "hey", "namaste", "good morning", "good evening"]) and len(lower.split()) <= 4
+        is_greeting = bool(re.search(r"^(hi+|hey+|hello+|namaste|hlo|good\s*(morning|evening|afternoon))\b", lower)) and len(lower.split()) <= 4
 
         # 5. Slots
         budget = cls.extract_budget(text)
         ram = cls.extract_ram(text)
         purpose = cls.extract_purpose(text)
+
+        # 6. Catalog / List / Price query detection
+        is_catalog_query = any(w in lower for w in [
+            "list", "sab", "sabhi", "all laptop", "dikho", "dikhao", "show",
+            "highest price", "sabse mahanga", "most expensive", "sabse sasta",
+            "cheapest", "lowest price", "top laptop", "premium", "costly",
+            "kitne laptop", "how many", "catalog"
+        ])
 
         # Decision Logic
         if is_lead:
@@ -197,7 +205,10 @@ class IntentDetector:
             intent = UserIntent.COMPARISON
         elif is_policy_faq:
             intent = UserIntent.POLICY_FAQ
-        elif budget or ram or purpose or any(w in lower for w in ["laptop", "suggest", "chahiye", "recommend", "options", "best"]):
+        elif budget or ram or purpose or is_catalog_query or any(w in lower for w in [
+            "laptop", "suggest", "chahiye", "recommend", "options", "best",
+            "kaun sa", "konsa", "which", "good", "acha"
+        ]):
             intent = UserIntent.RECOMMENDATION
         elif is_greeting:
             intent = UserIntent.GREETING

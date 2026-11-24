@@ -36,6 +36,7 @@ def list_products(
     min_ram: Optional[int] = None,
     brand: Optional[str] = None,
     in_stock_only: bool = True,
+    sort_by_price_desc: bool = False,
     limit: int = 10
 ) -> List[Product]:
     """Safe, parameterized product filtering with SQLAlchemy."""
@@ -50,7 +51,9 @@ def list_products(
     if brand:
         query = query.filter(Product.brand.ilike(f"%{brand}%"))
 
-    # Default sort by price ascending (budget friendly first)
+    # Sort by price ascending or descending based on preference
+    if sort_by_price_desc:
+        return query.order_by(Product.price.desc()).limit(limit).all()
     return query.order_by(Product.price.asc()).limit(limit).all()
 
 

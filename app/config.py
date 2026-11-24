@@ -83,5 +83,11 @@ class Settings(BaseSettings):
             clean_chroma = self.CHROMA_PERSIST_DIR.lstrip("./\\")
             self.CHROMA_PERSIST_DIR = str(self.BASE_DIR / clean_chroma)
 
+        # Strip any extraneous quotes from API keys
+        if self.GROQ_API_KEY:
+            self.GROQ_API_KEY = self.GROQ_API_KEY.strip("\"' ")
+        if self.OPENROUTER_API_KEY:
+            self.OPENROUTER_API_KEY = self.OPENROUTER_API_KEY.strip("\"' ")
+
 
 settings = Settings()

@@ -58,23 +58,36 @@ class SalesAgent:
         min_ram = min_ram_override or slots.min_ram
         brand = brand_override or slots.brand
 
+        # Check if user is asking for price extremes, catalog list, or a brand new "best laptop" query
+        lower_msg = message.lower()
+        is_reset_or_extreme = any(w in lower_msg for w in [
+            "mehenga", "mahanga", "expensive", "highest", "costliest", "premium",
+            "sasta", "cheapest", "lowest", "all laptop", "sab laptop", "list", "catalog"
+        ])
+        
+        # If user explicitly asks for "best laptop" for a purpose (without "isme/inme"), treat as new requirement
+        is_followup = any(w in lower_msg for w in ["isme", "inme", "unme", "in dono", "aur options", "ye wala"])
+        is_fresh_purpose_query = bool(slots.purpose) and not is_followup
+
         # 3. Multi-Turn Context Carryover:
         # If budget or RAM is missing in current message, look back at recent conversation turns
-        if budget is None and recent_history:
-            for past_msg in reversed(recent_history):
-                if past_msg["role"] == "user":
-                    past_budget = IntentDetector.extract_budget(past_msg["content"])
-                    if past_budget:
-                        budget = past_budget
-                        break
+        # (Only carry over if the current message is a genuine continuation, not a fresh topic or extreme)
+        if not is_reset_or_extreme and not is_fresh_purpose_query and slots.intent not in (UserIntent.GREETING, UserIntent.POLICY_FAQ):
+            if budget is None and recent_history:
+                for past_msg in reversed(recent_history):
+                    if past_msg["role"] == "user":
+                        past_budget = IntentDetector.extract_budget(past_msg["content"])
+                        if past_budget:
+                            budget = past_budget
+                            break
 
-        if min_ram is None and recent_history:
-            for past_msg in reversed(recent_history):
-                if past_msg["role"] == "user":
-                    past_ram = IntentDetector.extract_ram(past_msg["content"])
-                    if past_ram:
-                        min_ram = past_ram
-                        break
+            if min_ram is None and recent_history:
+                for past_msg in reversed(recent_history):
+                    if past_msg["role"] == "user":
+                        past_ram = IntentDetector.extract_ram(past_msg["content"])
+                        if past_ram:
+                            min_ram = past_ram
+                            break
 
         # If product IDs missing for comparison, check recent history
         product_ids = slots.product_ids

@@ -127,7 +127,7 @@ def run_rag_evaluations():
 
         if sc.get("must_have_gpu"):
             faithfulness_checks += 1
-            if any(p.get("gpu") and "RTX" in p["gpu"] or "GeForce" in p["gpu"] for p in products):
+            if any(p.get("gpu") and ("RTX" in p["gpu"] or "GeForce" in p["gpu"]) for p in products):
                 faithfulness_hits += 1
             else:
                 grounding_ok = False

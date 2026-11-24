@@ -27,6 +27,7 @@ def search_products_sql(
     min_ram: Optional[int] = None,
     brand: Optional[str] = None,
     in_stock_only: bool = True,
+    sort_by_price_desc: bool = False,
     limit: int = 10
 ) -> List[Dict[str, Any]]:
     """Query authoritative SQL database for products meeting hard criteria."""
@@ -36,6 +37,7 @@ def search_products_sql(
         min_ram=min_ram,
         brand=brand,
         in_stock_only=in_stock_only,
+        sort_by_price_desc=sort_by_price_desc,
         limit=limit
     )
     return [p.to_dict() for p in products]

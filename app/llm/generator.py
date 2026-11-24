@@ -15,6 +15,7 @@ TechNova AI Sales Assistant - Universal LLM Response Generator
 =============================================================================
 """
 
+import re
 from typing import List, Dict, Any, Optional
 import httpx
 from app.config import settings
@@ -32,9 +33,9 @@ class LLMGenerator:
         temperature: float = 0.3
     ) -> str:
         """Call external LLM API if key is available, else synthesize structured sales answer."""
-        api_key = settings.OPENROUTER_API_KEY or settings.GROQ_API_KEY
+        api_key = (settings.GROQ_API_KEY or settings.OPENROUTER_API_KEY or "").strip("\"' ")
         
-        if api_key and api_key.strip():
+        if api_key:
             try:
                 return cls._call_api(prompt, system_prompt, api_key, temperature)
             except Exception as e:
@@ -44,16 +45,22 @@ class LLMGenerator:
 
     @classmethod
     def _call_api(cls, prompt: str, system_prompt: str, api_key: str, temperature: float) -> str:
-        """Call OpenAI-compatible endpoints (OpenRouter or Groq)."""
-        if settings.LLM_PROVIDER.lower() == "groq" or (settings.GROQ_API_KEY and not settings.OPENROUTER_API_KEY):
+        """Call OpenAI-compatible endpoints (Groq or OpenRouter)."""
+        clean_key = api_key.strip("\"' ")
+        is_groq = settings.LLM_PROVIDER.lower() == "groq" or clean_key.startswith("gsk_")
+        
+        if is_groq:
             endpoint = "https://api.groq.com/openai/v1/chat/completions"
-            model = settings.DEFAULT_LLM_MODEL if "llama" in settings.DEFAULT_LLM_MODEL else "llama-3.1-8b-instant"
+            model = settings.DEFAULT_LLM_MODEL
+            # Ensure model is valid for Groq
+            if not model or "/" in model or ":" in model:
+                model = "llama-3.1-8b-instant"
         else:
             endpoint = "https://openrouter.ai/api/v1/chat/completions"
-            model = settings.DEFAULT_LLM_MODEL
+            model = settings.DEFAULT_LLM_MODEL or "meta-llama/llama-3-8b-instruct:free"
 
         headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Bearer {clean_key}",
             "Content-Type": "application/json"
         }
         if "openrouter" in endpoint:
@@ -70,7 +77,7 @@ class LLMGenerator:
             "max_tokens": 700
         }
 
-        with httpx.Client(timeout=20.0) as client:
+        with httpx.Client(timeout=25.0) as client:
             response = client.post(endpoint, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
@@ -89,14 +96,44 @@ class LLMGenerator:
             if l.startswith('Customer Inquiry:') and i + 1 < len(lines):
                 customer_query = lines[i + 1].strip('"\t ')
 
-        # Greeting detection
         lower_q = customer_query.lower()
-        if any(w in lower_q for w in ["hello", "hi", "hey", "namaste"]) and len(lower_q.split()) <= 3:
+
+        # Greeting detection (Strict word boundary to prevent 'higest' matching 'hi')
+        if re.search(r"\b(hello|hi|hey|namaste)\b", lower_q) and len(lower_q.split()) <= 3:
             return (
                 "Namaste! TechNova Store mein aapka swagat hai. \n\n"
                 "Main aapka AI Sales Representative hoon. Main aapke budget aur requirements (jaise Coding, "
                 "Machine Learning, Gaming, ya Daily Office use) ke hisaab se best laptop choose karne mein help karunga.\n\n"
                 "Aapka approximate budget kitna hai aur aap laptop kis primary purpose ke liye search kar rahe hain?"
+            )
+
+        # Highest / most expensive laptop query
+        if any(w in lower_q for w in ["highest", "mehenga", "mahanga", "expensive", "costliest", "top of the line", "premium", "costly"]):
+            if "Authoritative Product Catalog" in prompt:
+                catalog_section = prompt.split("Authoritative Product Catalog (Live Database):")[1]
+                if "###" in catalog_section:
+                    catalog_section = catalog_section.split("###")[0]
+                products_raw = [p.strip() for p in catalog_section.split("- Product:") if p.strip()]
+                if products_raw:
+                    top_prod = products_raw[0]
+                    p_lines = top_prod.split("\n")
+                    name_line = p_lines[0].strip()
+                    details = [pl.strip() for pl in p_lines[1:] if any(k in pl for k in ["Price:", "RAM:", "Processor:", "GPU:", "Stock:", "Best For:"])]
+                    details_str = "\n".join([f"• {d}" for d in details])
+                    return (
+                        f"TechNova Store ka sabse premium model yeh hai:\n\n"
+                        f"**{name_line}**\n{details_str}\n\n"
+                        f"Yeh model ultra-high performance, professional computing aur demanding workloads ke liye design kiya gaya hai.\n\n"
+                        f"Kya aap iska detailed comparison ya financing/EMI options dekhna chahenge?"
+                    )
+
+        # Non-laptop / irrelevant query detection
+        laptop_keywords = ["laptop", "notebook", "pc", "processor", "ram", "gpu", "gaming", "coding", "technova", "price", "stock", "warranty", "store"]
+        if not any(w in lower_q for w in laptop_keywords) and "Authoritative Product Catalog" not in prompt:
+            return (
+                "Main sirf TechNova Store ke laptops aur company policies ke baare mein help kar sakta hoon! 😊\n\n"
+                "Aap mujhse best laptops, budget recommendations, comparisons, warranty ya EMI ke baare mein pooch sakte hain.\n\n"
+                "Aapka budget kitna hai aur laptop kis primary use ke liye search kar rahe hain?"
             )
 
         # Policy / FAQ query detection
@@ -148,13 +185,19 @@ class LLMGenerator:
                 )
                 return "\n".join(response_parts)
 
-        # Alternative synthesis for zero-result scenario
+        # Alternative synthesis for zero-result scenario (Cleaned to avoid prompt leakage)
         if "Alternative Options for Upselling" in prompt:
-            alts_section = prompt.split("Alternative Options for Upselling / Budget Adjustment:")[1].split("###")[0]
+            alts_raw = prompt.split("Alternative Options for Upselling / Budget Adjustment:")[1]
+            if "###" in alts_raw:
+                alts_raw = alts_raw.split("###")[0]
+            if "Customer Inquiry:" in alts_raw:
+                alts_raw = alts_raw.split("Customer Inquiry:")[0]
+            
+            clean_alts = "\n".join([line.strip() for line in alts_raw.split("\n") if line.strip().startswith("•")])
             return (
                 "Aapke exact specifications hamare current stock mein diye gaye budget ke andar match nahi huye, "
                 "lekin ek sales representative ki tarah main aapke liye yeh best nearest options recommend karta hoon:\n\n"
-                f"{alts_section.strip()}\n\n"
+                f"{clean_alts}\n\n"
                 "Aapki preference ke hisaab se kya aap budget thoda stretch karna chahenge ya alternative configuration choose karenge?"
             )
 

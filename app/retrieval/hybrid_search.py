@@ -45,12 +45,19 @@ class HybridRetriever:
         4. Zero-match alternative suggestions if SQL yields 0 results.
         """
         # 1. SQL Search (Authoritative for pricing, stock, hardware)
+        lower_q = query.lower()
+        sort_desc = any(w in lower_q for w in [
+            "highest", "mehenga", "mahanga", "expensive", "costliest", "premium",
+            "top price", "top model", "sabse mehenga", "sabse mahanga"
+        ]) or (max_price is not None and max_price >= 90000)
+        
         sql_products = search_products_sql(
             db=db,
             max_price=max_price,
             min_ram=min_ram,
             brand=brand,
             in_stock_only=True,
+            sort_by_price_desc=sort_desc,
             limit=10
         )
 
