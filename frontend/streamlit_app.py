@@ -22,10 +22,32 @@ TechNova AI Sales Assistant - Frontend Web Application (Streamlit)
 =============================================================================
 """
 
+import os
+import sys
+from pathlib import Path
 import uuid
 import requests
 import pandas as pd
 import streamlit as st
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.config import settings
+from app.database.connection import SessionLocal, init_db
+from app.database import crud
+from app.agents.sales_agent import SalesAgent
+from app.ingestion.embeddings import EmbeddingManager
+
+# Auto-seed database & vector store if missing (e.g. upon fresh deployment on Streamlit Cloud)
+db_file = Path(settings.DATABASE_URL.replace("sqlite:///", ""))
+chroma_dir = Path(settings.CHROMA_PERSIST_DIR)
+
+if not db_file.exists() or not chroma_dir.exists():
+    with st.spinner("Initializing TechNova Store catalog & vector embeddings..."):
+        from scripts.seed_db import run_seeding
+        run_seeding()
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -35,7 +57,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-API_BASE_URL = "http://127.0.0.1:8000"
+# API Base URL: checks Streamlit secrets, then ENV, then default localhost
+API_BASE_URL = getattr(st, "secrets", {}).get("API_BASE_URL", os.getenv("API_BASE_URL", "http://127.0.0.1:8000"))
 
 # --- Premium Executive Styling (Inspired by Modern CRM & AI Integration) ---
 st.markdown("""
@@ -216,34 +239,58 @@ st.markdown("""
 @st.cache_data(ttl=10)
 def fetch_health():
     try:
-        res = requests.get(f"{API_BASE_URL}/health", timeout=2.0)
+        res = requests.get(f"{API_BASE_URL}/health", timeout=1.5)
         if res.status_code == 200:
             return res.json()
     except Exception:
         pass
-    return None
+    
+    # In-process standalone fallback for Streamlit Cloud
+    try:
+        col = EmbeddingManager.get_collection()
+        count = col.count()
+        return {
+            "status": "healthy",
+            "database": {"status": "healthy"},
+            "vector_database": {"status": "healthy", "indexed_chunks": count},
+            "mode": "standalone_in_process"
+        }
+    except Exception as e:
+        return {"status": f"degraded: {e}"}
 
 
 @st.cache_data(ttl=10)
 def fetch_products():
     try:
-        res = requests.get(f"{API_BASE_URL}/api/products?limit=50", timeout=3.0)
+        res = requests.get(f"{API_BASE_URL}/api/products?limit=50", timeout=2.0)
         if res.status_code == 200:
             return res.json()
     except Exception:
         pass
-    return []
+
+    db = SessionLocal()
+    try:
+        prods = crud.list_products(db, limit=50)
+        return [p.to_dict() for p in prods]
+    finally:
+        db.close()
 
 
 @st.cache_data(ttl=5)
 def fetch_leads():
     try:
-        res = requests.get(f"{API_BASE_URL}/api/leads?limit=50", timeout=3.0)
+        res = requests.get(f"{API_BASE_URL}/api/leads?limit=50", timeout=2.0)
         if res.status_code == 200:
             return res.json()
     except Exception:
         pass
-    return []
+
+    db = SessionLocal()
+    try:
+        leads = crud.get_leads(db, limit=50)
+        return [l.to_dict() for l in leads]
+    finally:
+        db.close()
 
 
 def send_chat_message(session_id: str, message: str, max_price=None, min_ram=None, brand=None):
@@ -255,15 +302,27 @@ def send_chat_message(session_id: str, message: str, max_price=None, min_ram=Non
         "brand": brand
     }
     try:
-        response = requests.post(f"{API_BASE_URL}/api/chat", json=payload, timeout=30.0)
+        response = requests.post(f"{API_BASE_URL}/api/chat", json=payload, timeout=25.0)
         if response.status_code == 200:
             return response.json()
-        else:
-            return {"error": f"API Error ({response.status_code}): {response.text}"}
-    except requests.exceptions.ConnectionError:
-        return {"error": "FastAPI backend is offline. Run: `uvicorn app.main:app --reload --port 8000`"}
+    except Exception:
+        pass
+
+    db = SessionLocal()
+    try:
+        res = SalesAgent.process_message(
+            db=db,
+            session_id=session_id,
+            message=message,
+            max_price_override=max_price,
+            min_ram_override=min_ram,
+            brand_override=brand
+        )
+        return res
     except Exception as e:
-        return {"error": f"Request failed: {str(e)}"}
+        return {"error": f"Sales Agent execution error: {str(e)}"}
+    finally:
+        db.close()
 
 
 def submit_lead(session_id, name, phone, email, notes, product_id=None):
@@ -276,10 +335,28 @@ def submit_lead(session_id, name, phone, email, notes, product_id=None):
         "interested_product_id": product_id
     }
     try:
-        res = requests.post(f"{API_BASE_URL}/api/leads", json=payload, timeout=5.0)
-        return res.status_code == 201
+        res = requests.post(f"{API_BASE_URL}/api/leads", json=payload, timeout=3.0)
+        if res.status_code == 201:
+            return True
+    except Exception:
+        pass
+
+    db = SessionLocal()
+    try:
+        crud.create_lead(
+            db=db,
+            session_id=session_id,
+            customer_name=name,
+            phone=phone,
+            email=email,
+            notes=notes,
+            product_id=product_id
+        )
+        return True
     except Exception:
         return False
+    finally:
+        db.close()
 
 
 # --- Session State Setup ---
