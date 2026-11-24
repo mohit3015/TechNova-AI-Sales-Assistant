@@ -35,6 +35,7 @@ def list_products(
     max_price: Optional[int] = None,
     min_ram: Optional[int] = None,
     brand: Optional[str] = None,
+    product_ids: Optional[List[str]] = None,
     in_stock_only: bool = True,
     sort_by_price_desc: bool = False,
     limit: int = 10
@@ -42,6 +43,8 @@ def list_products(
     """Safe, parameterized product filtering with SQLAlchemy."""
     query = db.query(Product)
 
+    if product_ids:
+        query = query.filter(Product.product_id.in_(product_ids))
     if in_stock_only:
         query = query.filter(Product.stock_count > 0)
     if max_price is not None:

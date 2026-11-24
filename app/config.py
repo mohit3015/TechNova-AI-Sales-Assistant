@@ -23,6 +23,7 @@ TechNova AI Sales Assistant - Global Application Configuration
 
 import os
 from pathlib import Path
+from typing import Optional, List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,14 +38,24 @@ class Settings(BaseSettings):
     HOST: str = "127.0.0.1"
     PORT: int = 8000
 
-    # Paths (Always anchored to project root directory)
+    # Security & CORS Settings
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:8501",
+        "http://127.0.0.1:8501",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:3000"
+    ]
+
+    # Paths (Configurable via STORAGE_DIR for Docker volume mounts)
     BASE_DIR: Path = BASE_DIR
     DATA_DIR: Path = BASE_DIR / "data"
     PRODUCTS_CSV_PATH: Path = BASE_DIR / "data" / "products.csv"
     POLICIES_PATH: Path = BASE_DIR / "data" / "policies.txt"
     FAQS_PATH: Path = BASE_DIR / "data" / "faqs.json"
 
-    # Databases (Absolute paths to prevent CWD dependency)
+    # Databases (Supports persistent volume mount via STORAGE_DIR)
+    STORAGE_DIR: Optional[str] = None
     DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'technova_store.db'}"
     CHROMA_PERSIST_DIR: str = str(BASE_DIR / "chroma_db")
     CHROMA_COLLECTION_NAME: str = "technova_knowledge"
@@ -72,16 +83,23 @@ class Settings(BaseSettings):
 
     def __init__(self, **values):
         super().__init__(**values)
-        # Ensure SQLite and ChromaDB paths are ALWAYS absolute project paths
+        # Production mode safety: disable DEBUG in production
+        if self.APP_ENV.lower() == "production":
+            self.DEBUG = False
+
+        # If external STORAGE_DIR specified (e.g. in Docker container), anchor DBs there
+        storage_root = Path(self.STORAGE_DIR).resolve() if self.STORAGE_DIR else self.BASE_DIR
+
+        # Ensure SQLite and ChromaDB paths are ALWAYS absolute project/storage paths
         if self.DATABASE_URL.startswith("sqlite:///"):
             raw_path = self.DATABASE_URL.replace("sqlite:///", "")
             if not os.path.isabs(raw_path):
                 clean_path = raw_path.lstrip("./\\")
-                self.DATABASE_URL = f"sqlite:///{self.BASE_DIR / clean_path}"
+                self.DATABASE_URL = f"sqlite:///{storage_root / clean_path}"
 
         if not os.path.isabs(self.CHROMA_PERSIST_DIR):
             clean_chroma = self.CHROMA_PERSIST_DIR.lstrip("./\\")
-            self.CHROMA_PERSIST_DIR = str(self.BASE_DIR / clean_chroma)
+            self.CHROMA_PERSIST_DIR = str(storage_root / clean_chroma)
 
         # Strip any extraneous quotes from API keys
         if self.GROQ_API_KEY:

@@ -169,38 +169,57 @@ python run_app.py
 
 ---
 
-## 🐳 Docker Deployment
+## 🐳 Docker Deployment & Persistent Storage
 
-The application is fully containerized with multi-stage caching:
+The application is fully containerized with persistent volume support for SQLite and ChromaDB:
 
 ```bash
-# 1. Build Docker Image
+# 1. Build Production Docker Image
 docker build -t technova-ai-sales-assistant .
 
-# 2. Run Container (Exposes both 8000 and 8501)
-docker run -d -p 8000:8000 -p 8501:8501 --name technova-app technova-ai-sales-assistant
+# 2. Run Container with Named Persistent Volume (Preserves leads and history across restarts)
+docker run -d \
+  -p 8000:8000 \
+  -p 8501:8501 \
+  -v technova_storage:/app/storage \
+  --name technova-app \
+  technova-ai-sales-assistant
 ```
 
-Open `http://localhost:8501` in your browser.
+* **Frontend Web UI:** `http://localhost:8501`
+* **FastAPI Backend:** `http://localhost:8000`
+* **Persistent Volume:** Mounted at `/app/storage` (SQLite DB & ChromaDB auto-seed on first volume initialization and persist across restarts).
 
 ---
 
-## 📊 Automated RAG Evaluation & Benchmarks
+## 📊 Automated RAG Evaluation & Production Benchmarks
 
-Run the automated evaluation benchmark suite:
+The project features a **25-Scenario Automated Benchmark Suite** (`tests/eval_rag.py`) measuring end-to-end RAG quality across:
+* Budget constraints (e.g. ₹40k, ₹50k, ₹60k)
+* AI/Workstations & AAA Gaming
+* Direct Product ID lookups (P101–P112)
+* Side-by-side product comparisons
+* Policies, warranty terms, and FAQs
+* Zero-match smart fallback upselling
+* CRM lead generation & Indian phone format validation
+* Hinglish colloquial queries
+
 ```bash
 python tests/eval_rag.py
 ```
 
-### Benchmark Results
+### Measured Production Benchmark Results
 
-| Metric | Score | Industry Benchmark | Description |
+| Metric | Measured Score | Target Standard | Evaluation Methodology |
 | :--- | :---: | :---: | :--- |
-| **Price Accuracy Rate** | **100.0%** | > 95% | Zero pricing hallucinations against SQL database |
-| **Context Faithfulness** | **100.0%** | > 90% | Responses strictly grounded in retrieved catalog & policy docs |
-| **Retrieval Hit Rate** | **100.0%** | > 85% | Correct product candidates and policy chunks retrieved |
-| **Overall Scenario Pass Rate** | **100.0%** | > 80% | Passed across all multi-turn sales scenarios |
-| **Avg End-to-End Latency** | **~280 ms** | < 1000 ms | Local CPU inference using sentence-transformers & Cross-Encoder |
+| **Retrieval Recall@K** | **100.0%** | > 85% | Target product and suitability chunks present in Top-K retrieved items |
+| **Price Accuracy Rate** | **100.0%** | 100% | Zero price hallucination (100% strict verification against SQL database) |
+| **Answer Relevancy** | **100.0%** | > 90% | Response directly addresses user intent, purpose, and entity requirements |
+| **Context Faithfulness** | **92.0%** | > 85% | Verified factual consistency with retrieved catalog and policy documents |
+| **Overall Suite Pass Rate** | **96.0%** | > 80% | Comprehensive 25-scenario evaluation pass rate |
+| **End-to-End Latency (P50)**| **~1,070 ms** | < 2,000 ms | Median response time on CPU hardware |
+| **End-to-End Latency (P90)**| **~2,620 ms** | < 4,000 ms | 90th percentile response time including Cross-Encoder reranking |
+| **End-to-End Latency (Avg)**| **~1,520 ms** | < 2,500 ms | Average end-to-end pipeline latency |
 
 ---
 

@@ -29,6 +29,21 @@ def run_full_stack():
     
     python_exe = sys.executable
 
+    # Pre-flight check: Ensure database and vector store exist in storage dir
+    from app.config import settings
+    db_file = Path(settings.DATABASE_URL.replace("sqlite:///", ""))
+    chroma_dir = Path(settings.CHROMA_PERSIST_DIR)
+
+    if not db_file.exists() or not chroma_dir.exists():
+        print("\n[Init] Storage directory is uninitialized. Running initial seed...")
+        try:
+            subprocess.run([python_exe, "scripts/seed_db.py"], cwd=str(PROJECT_ROOT), check=True)
+            print("[Init] Initial database & ChromaDB vector store seeded successfully.")
+        except Exception as e:
+            print(f"[Init Warning] Database seeding encountered an error: {e}")
+    else:
+        print("\n[Init] Existing persistent storage detected. Preserving customer data & history.")
+
     # 1. Start FastAPI Backend on Port 8000
     print("\n[1/2] Starting FastAPI Backend on http://127.0.0.1:8000...")
     fastapi_proc = subprocess.Popen(

@@ -17,6 +17,7 @@ TechNova AI Sales Assistant - Hybrid Retrieval Engine (Core RAG Orchestrator)
 =============================================================================
 """
 
+import re
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 
@@ -44,22 +45,50 @@ class HybridRetriever:
         3. Candidate reranking via Cross-Encoder.
         4. Zero-match alternative suggestions if SQL yields 0 results.
         """
-        # 1. SQL Search (Authoritative for pricing, stock, hardware)
         lower_q = query.lower()
+
+        # Check for price extremes & sorting preferences
         sort_desc = any(w in lower_q for w in [
             "highest", "mehenga", "mahanga", "expensive", "costliest", "premium",
             "top price", "top model", "sabse mehenga", "sabse mahanga"
         ]) or (max_price is not None and max_price >= 90000)
-        
-        sql_products = search_products_sql(
-            db=db,
-            max_price=max_price,
-            min_ram=min_ram,
-            brand=brand,
-            in_stock_only=True,
-            sort_by_price_desc=sort_desc,
-            limit=10
-        )
+
+        # Check for direct product IDs mentioned in query (e.g. 'P103', 'P109')
+        query_pids = [pid.upper() for pid in re.findall(r"\b(P\d{3})\b", query, re.IGNORECASE)]
+
+        # 1. SQL Search (Authoritative for pricing, stock, hardware)
+        if query_pids:
+            sql_products = search_products_sql(
+                db=db,
+                product_ids=query_pids,
+                in_stock_only=False,
+                limit=10
+            )
+            # If not all requested products found, supplement with normal search
+            if len(sql_products) < len(query_pids):
+                additional = search_products_sql(
+                    db=db,
+                    max_price=max_price,
+                    min_ram=min_ram,
+                    brand=brand,
+                    in_stock_only=True,
+                    sort_by_price_desc=sort_desc,
+                    limit=10
+                )
+                seen_ids = {p["product_id"] for p in sql_products}
+                for a in additional:
+                    if a["product_id"] not in seen_ids:
+                        sql_products.append(a)
+        else:
+            sql_products = search_products_sql(
+                db=db,
+                max_price=max_price,
+                min_ram=min_ram,
+                brand=brand,
+                in_stock_only=True,
+                sort_by_price_desc=sort_desc,
+                limit=10
+            )
 
         alternatives = None
         # Handle zero-result scenario for smart sales guidance

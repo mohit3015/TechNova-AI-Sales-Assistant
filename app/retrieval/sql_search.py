@@ -26,6 +26,7 @@ def search_products_sql(
     max_price: Optional[int] = None,
     min_ram: Optional[int] = None,
     brand: Optional[str] = None,
+    product_ids: Optional[List[str]] = None,
     in_stock_only: bool = True,
     sort_by_price_desc: bool = False,
     limit: int = 10
@@ -36,6 +37,7 @@ def search_products_sql(
         max_price=max_price,
         min_ram=min_ram,
         brand=brand,
+        product_ids=product_ids,
         in_stock_only=in_stock_only,
         sort_by_price_desc=sort_by_price_desc,
         limit=limit

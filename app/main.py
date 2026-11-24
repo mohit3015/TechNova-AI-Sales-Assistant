@@ -56,13 +56,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Middleware (Allows Streamlit and frontend clients to call backend API)
+# CORS Middleware (Restricted to verified frontends, preventing wildcard exposure)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "X-Requested-With"],
 )
 
 # Include API Routers

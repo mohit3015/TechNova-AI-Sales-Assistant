@@ -207,7 +207,7 @@ class IntentDetector:
             intent = UserIntent.POLICY_FAQ
         elif budget or ram or purpose or is_catalog_query or any(w in lower for w in [
             "laptop", "suggest", "chahiye", "recommend", "options", "best",
-            "kaun sa", "konsa", "which", "good", "acha"
+            "kaun sa", "konsa", "which", "good", "acha", "details", "specs", "specification"
         ]):
             intent = UserIntent.RECOMMENDATION
         elif is_greeting:
